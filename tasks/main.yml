@@ -1,0 +1,127 @@
+---
+# tasks file for ansible-cf-terraforming
+- name: check if cf-terraforming folder exists
+  stat: 
+    path: /opt/cf-terraforming
+  register: cf-terraforming_folder_exists
+  tags: cf-terraforming
+  
+- name: Create cf-terraforming directory
+  ansible.builtin.file:
+    path: /opt/cf-terraforming
+    state: directory
+    mode: '0755'
+  tags: cf-terraforming
+  when: cf-terraforming_folder_exists.stat.exists == False
+
+- name: Get latest Release from cf-terraforming
+  shell: curl -Lo /opt/cf-terraforming/cf-terraforming.tar.gz https://github.com/cloudflare/cf-terraforming/releases/download/$(curl -s https://api.github.com/repos/cloudflare/cf-terraforming/releases/latest | grep tag_name | cut -d '"' -f 4)/cf-terraforming_$(curl -s https://api.github.com/repos/cloudflare/cf-terraforming/releases/latest | grep tag_name | cut -d '"' -f 4 | cut -c2-)_linux_amd64.tar.gz
+  args:
+    warn: no
+  tags: cf-terraforming
+
+- name: Unarchive a file that is already on the remote machine
+  ansible.builtin.unarchive:
+    src: /opt/cf-terraforming/cf-terraforming.tar.gz
+    dest: /opt/cf-terraforming/
+  tags: cf-terraforming
+
+- name: Change file ownership, group and permissions
+  ansible.builtin.file:
+    path: /opt/cf-terraforming/
+    owner: root
+    group: root
+    mode: '0755'
+  tags: cf-terraforming
+
+- name: Verify cf-terraforming exists
+  stat: path=/opt/cf-terraforming/cf-terraforming
+  register: cf-terraforming_stat
+  tags: cf-terraforming
+
+- name: Configure cf-terraforming on system bin.
+  file:
+    src: "/opt/cf-terraforming/cf-terraforming"
+    dest: "/usr/bin/cf-terraforming"
+    state: link
+  when: cf-terraforming_stat.stat.exists
+  tags: cf-terraforming
+
+- name: Configure cf-terraforming on system sbin.
+  file:
+    src: "/opt/cf-terraforming/cf-terraforming" 
+    dest: "/usr/sbin/cf-terraforming"
+    state: link
+  when: cf-terraforming_stat.stat.exists
+  tags: cf-terraforming
+
+# Customize Per existing user
+- name : list users to apply cf-terraforming
+  shell: |
+    getent passwd | awk -F: '$3 > 999 {print $1}'
+  register: users
+  tags: cf-terraforming
+
+- debug:
+    var: users
+    verbosity: 2
+
+- name: Create user bin directory
+  file: path=/home/{{ item }}/.local/bin/ state=directory mode="a+rw"
+  when: cf-terraforming_stat.stat.exists
+  with_items: "{{ users.stdout_lines }}"
+  tags: cf-terraforming
+
+- name: Configure cf-terraforming on user bin.
+  file:
+    src: "/opt/cf-terraforming/cf-terraforming"
+    dest: "/home/{{ item }}/.local/bin/cf-terraforming"
+    state: link
+  with_items: "{{ users.stdout_lines }}"
+  when: cf-terraforming_stat.stat.exists
+  tags: cf-terraforming
+
+- name: Create user bin directory
+  file: path=/home/{{ item }}/.local/bin/ state=directory mode="a+rw"
+  when: cf-terraforming_stat.stat.exists
+  with_items: "{{ users.stdout_lines }}"
+  tags: cf-terraforming
+
+- name: update cf-terraforming on users bashrc
+  lineinfile:
+    dest: /home/{{ item }}/.bashrc
+    state: present
+    line: 'export PATH="/opt/cf-terraforming/:$PATH"'
+  with_items: "{{ users.stdout_lines }}"
+  tags: cf-terraforming
+  ignore_errors: true
+
+- name: update cf-terraforming on skel bashrc
+  lineinfile:
+    dest: /etc/skel/.bashrc
+    state: present
+    line: 'export PATH="/opt/cf-terraforming/:$PATH"'
+  tags: cf-terraforming
+
+# Check status
+- shell: which cf-terraforming
+  args:
+    executable: /bin/bash -ilc
+  register: which_cf-terraforming
+  failed_when: false
+  changed_when: false
+  tags: cf-terraforming
+
+- debug:
+    var:  which_cf-terraforming.stdout
+    verbosity: 2
+
+- command: cf-terraforming version
+  register: result_cf-terraforming
+  failed_when: false
+  changed_when: false
+  tags: cf-terraforming
+
+- debug:
+    var: result_cf-terraforming.stdout
+  tags: cf-terraforming
