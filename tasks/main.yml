@@ -3,7 +3,7 @@
 - name: check if cf-terraforming folder exists
   stat: 
     path: /opt/cf-terraforming
-  register: cf-terraforming_folder_exists
+  register: cf_terraforming_folder_exists
   tags: cf-terraforming
   
 - name: Create cf-terraforming directory
@@ -12,7 +12,7 @@
     state: directory
     mode: '0755'
   tags: cf-terraforming
-  when: cf-terraforming_folder_exists.stat.exists == False
+  when: cf_terraforming_folder_exists.stat.exists == False
 
 - name: Get latest Release from cf-terraforming
   shell: curl -Lo /opt/cf-terraforming/cf-terraforming.tar.gz https://github.com/cloudflare/cf-terraforming/releases/download/$(curl -s https://api.github.com/repos/cloudflare/cf-terraforming/releases/latest | grep tag_name | cut -d '"' -f 4)/cf-terraforming_$(curl -s https://api.github.com/repos/cloudflare/cf-terraforming/releases/latest | grep tag_name | cut -d '"' -f 4 | cut -c2-)_linux_amd64.tar.gz
@@ -36,7 +36,7 @@
 
 - name: Verify cf-terraforming exists
   stat: path=/opt/cf-terraforming/cf-terraforming
-  register: cf-terraforming_stat
+  register: cf_terraforming_stat
   tags: cf-terraforming
 
 - name: Configure cf-terraforming on system bin.
@@ -44,7 +44,7 @@
     src: "/opt/cf-terraforming/cf-terraforming"
     dest: "/usr/bin/cf-terraforming"
     state: link
-  when: cf-terraforming_stat.stat.exists
+  when: cf_terraforming_stat.stat.exists
   tags: cf-terraforming
 
 - name: Configure cf-terraforming on system sbin.
@@ -52,7 +52,7 @@
     src: "/opt/cf-terraforming/cf-terraforming" 
     dest: "/usr/sbin/cf-terraforming"
     state: link
-  when: cf-terraforming_stat.stat.exists
+  when: cf_terraforming_stat.stat.exists
   tags: cf-terraforming
 
 # Customize Per existing user
@@ -68,7 +68,7 @@
 
 - name: Create user bin directory
   file: path=/home/{{ item }}/.local/bin/ state=directory mode="a+rw"
-  when: cf-terraforming_stat.stat.exists
+  when: cf_terraforming_stat.stat.exists
   with_items: "{{ users.stdout_lines }}"
   tags: cf-terraforming
 
@@ -78,12 +78,12 @@
     dest: "/home/{{ item }}/.local/bin/cf-terraforming"
     state: link
   with_items: "{{ users.stdout_lines }}"
-  when: cf-terraforming_stat.stat.exists
+  when: cf_terraforming_stat.stat.exists
   tags: cf-terraforming
 
 - name: Create user bin directory
   file: path=/home/{{ item }}/.local/bin/ state=directory mode="a+rw"
-  when: cf-terraforming_stat.stat.exists
+  when: cf_terraforming_stat.stat.exists
   with_items: "{{ users.stdout_lines }}"
   tags: cf-terraforming
 
@@ -107,21 +107,21 @@
 - shell: which cf-terraforming
   args:
     executable: /bin/bash -ilc
-  register: which_cf-terraforming
+  register: which_cf_terraforming
   failed_when: false
   changed_when: false
   tags: cf-terraforming
 
 - debug:
-    var:  which_cf-terraforming.stdout
+    var:  which_cf_terraforming.stdout
     verbosity: 2
 
 - command: cf-terraforming version
-  register: result_cf-terraforming
+  register: result_cf_terraforming
   failed_when: false
   changed_when: false
   tags: cf-terraforming
 
 - debug:
-    var: result_cf-terraforming.stdout
+    var: result_cf_terraforming.stdout
   tags: cf-terraforming
